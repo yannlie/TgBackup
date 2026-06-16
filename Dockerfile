@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 LABEL maintainer="yannlie"
-LABEL description="Telegram Media Downloader with OneDrive Auto Upload"
+LABEL description="TgBackup - Telegram Media Backup Tool with OneDrive Support"
 
 # 设置工作目录
 WORKDIR /app

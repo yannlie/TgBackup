@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: tg-to-onedrive-uploader
+  IMAGE_NAME: tgbackup
 
 jobs:
   build:
@@ -79,4 +79,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
         readme-filepath: ./README.md
-        short-description: "Telegram Media Downloader with OneDrive Auto Upload"
+        short-description: "TgBackup - Telegram Media Backup Tool with OneDrive Support"

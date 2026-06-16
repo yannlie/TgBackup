@@ -1,13 +1,13 @@
-# Telegram Media Downloader with OneDrive Auto Upload
+# TgBackup - Telegram Media Backup Tool
 
-一个强大的 Telegram 媒体自动下载和备份工具，支持实时监听频道/群组消息，自动下载媒体文件并上传到 OneDrive。
+一个强大的 Telegram 媒体自动备份工具，支持实时监听频道/群组消息，自动下载媒体文件并备份到 OneDrive。
 
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://www.docker.com/)
-[![Docker Hub](https://img.shields.io/docker/v/yannlie/tg-to-onedrive-uploader?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/yannlie/tg-to-onedrive-uploader)
-[![Docker Pulls](https://img.shields.io/docker/pulls/yannlie/tg-to-onedrive-uploader?logo=docker)](https://hub.docker.com/r/yannlie/tg-to-onedrive-uploader)
-[![GitHub Release](https://img.shields.io/github/v/release/yannlie/tg-to-onedrive-uploader)](https://github.com/yannlie/tg-to-onedrive-uploader/releases)
+[![Docker Hub](https://img.shields.io/docker/v/yannlie/tgbackup?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/yannlie/tgbackup)
+[![Docker Pulls](https://img.shields.io/docker/pulls/yannlie/tgbackup?logo=docker)](https://hub.docker.com/r/yannlie/tgbackup)
+[![GitHub Release](https://img.shields.io/github/v/release/yannlie/tgbackup)](https://github.com/yannlie/tgbackup/releases)
 
 ## 🎯 核心特性
 
@@ -58,7 +58,7 @@
 
 ```bash
 # 拉取镜像
-docker pull yannlie/tg-to-onedrive-uploader:latest
+docker pull yannlie/tgbackup:latest
 
 # 准备配置
 mkdir -p config downloads sessions
@@ -67,12 +67,12 @@ cp telegram_config.example.json config/telegram_config.json
 
 # 运行
 docker run -d \
-  --name tg-downloader \
+  --name tgbackup \
   --restart unless-stopped \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/downloads:/app/downloads \
   -v $(pwd)/sessions:/app/sessions \
-  yannlie/tg-to-onedrive-uploader:latest
+  yannlie/tgbackup:latest
 ```
 
 **或使用 docker-compose**:

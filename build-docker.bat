@@ -8,7 +8,7 @@ echo ==================================
 echo.
 
 REM 配置
-set IMAGE_NAME=tg-to-onedrive-uploader
+set IMAGE_NAME=tgbackup
 set DOCKER_USERNAME=yannlie
 
 REM 获取版本号

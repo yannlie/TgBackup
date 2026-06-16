@@ -4,7 +4,7 @@
 set -e
 
 # 配置
-IMAGE_NAME="tg-to-onedrive-uploader"
+IMAGE_NAME="tgbackup"
 DOCKER_USERNAME="${DOCKER_USERNAME:-yannlie}"  # 替换为你的 Docker Hub 用户名
 VERSION=$(grep -oP '__version__ = "\K[^"]+' telegram_downloader.py | head -1)
 

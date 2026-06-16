@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  telegram-downloader:
+  tgbackup:
     build: .
-    container_name: tg-downloader
+    container_name: tgbackup
     restart: unless-stopped
 
     volumes:
@@ -65,10 +65,10 @@ services:
 
     command: python tg_to_onedrive.py --watch-path /app/downloads
 
-    # 如果只用 telegram-downloader 自带的上传功能，可以注释掉此服务
+    # 如果只用 tgbackup 自带的上传功能，可以注释掉此服务
     profiles:
       - standalone
 
 networks:
   default:
-    name: tg-network
+    name: tgbackup-network
