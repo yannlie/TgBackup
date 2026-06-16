@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  telegram-downloader:
+    build: .
+    container_name: tg-downloader
+    restart: unless-stopped
+
+    volumes:
+      # 配置文件
+      - ./telegram_config.json:/app/config/telegram_config.json:ro
+      - ./onedrive_config.json:/app/config/onedrive_config.json:ro
+
+      # 下载目录
+      - ./downloads:/app/downloads
+
+      # 日志目录
+      - ./logs:/app/logs
+
+      # Session 文件（持久化登录）
+      - ./sessions:/app/sessions
+
+    environment:
+      - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
+
+    # 网络模式
+    network_mode: bridge
+
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # 启动命令（可选择启用 Bot 控制）
+    # command: python telegram_downloader.py
+    command: python telegram_bot_controller.py
+
+  # 可选: OneDrive 目录监听上传器
+  onedrive-uploader:
+    build: .
+    container_name: onedrive-uploader
+    restart: unless-stopped
+
+    volumes:
+      - ./onedrive_config.json:/app/config/onedrive_config.json:ro
+      - ./downloads:/app/downloads
+      - ./logs:/app/logs
+
+    environment:
+      - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
+
+    command: python tg_to_onedrive.py --watch-path /app/downloads
+
+    # 如果只用 telegram-downloader 自带的上传功能，可以注释掉此服务
+    profiles:
+      - standalone
+
+networks:
+  default:
+    name: tg-network

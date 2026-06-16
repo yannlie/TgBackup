@@ -47,11 +47,81 @@
 🧪 **单元测试** - 完整的测试覆盖  
 🤖 **CI/CD** - GitHub Actions 自动化
 
-## 安装依赖
+## 🚀 快速开始
+
+### 方式 1：Docker 部署（推荐生产环境）
 
 ```bash
-pip install watchdog requests urllib3
+# Linux/macOS
+bash deploy.sh
+
+# Windows
+deploy.bat
 ```
+
+详细文档：[DOCKER.md](DOCKER.md)
+
+### 方式 2：直接运行
+
+```bash
+# 安装依赖
+pip install -r requirements.txt
+pip install -r requirements_telegram.txt
+
+# 配置
+cp telegram_config.example.json telegram_config.json
+# 编辑 telegram_config.json
+
+# 运行
+python telegram_downloader.py
+```
+
+详细文档：[TELEGRAM_README.md](TELEGRAM_README.md)
+
+### 方式 3：一键启动向导
+
+```bash
+python start.py
+```
+
+## 🤖 Bot 远程控制
+
+通过 Telegram Bot 远程控制下载器：
+
+### 配置 Bot
+
+1. 与 @BotFather 对话创建 Bot
+2. 获取 Bot Token
+3. 获取你的 User ID（@userinfobot）
+4. 在 `telegram_config.json` 添加：
+
+```json
+{
+  "bot_token": "123456:ABC-DEF...",
+  "admin_ids": [123456789]
+}
+```
+
+5. 启动 Bot 控制器：
+
+```bash
+python telegram_bot_controller.py
+
+# 或 Docker
+docker-compose up -d
+```
+
+### Bot 命令
+
+- `/start` - 显示帮助
+- `/status` - 查看运行状态
+- `/stats` - 查看统计信息
+- `/list` - 列出监听频道
+- `/add @channel` - 添加频道
+- `/remove @channel` - 移除频道
+- `/pause` - 暂停下载
+- `/resume` - 恢复下载
+- `/config` - 查看配置
 
 ## 配置步骤
 

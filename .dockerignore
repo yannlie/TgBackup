@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+.eggs
+
+# 虚拟环境
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日志和临时文件
+*.log
+*.tmp
+*.session
+*.session-journal
+
+# 配置文件（不打包进镜像）
+telegram_config.json
+onedrive_config.json
+downloaded_messages.json
+uploaded_files.json
+
+# 下载目录
+downloads/
+logs/
+sessions/
+
+# 文档
+*.md
+!README.md
+LICENSE
+
+# CI/CD
+.github/
+.circleci/
+
+# 测试
+test_*.py
+*_test.py
+tests/
+
+# 其他
+.DS_Store
+Thumbs.db
+*.bak
+push_to_github.bat
