@@ -1,19 +1,19 @@
-# TgBackup Wiki 索引
+# TgBackup 文档索引
 
 欢迎来到 TgBackup 详细文档！
 
 ## 📚 快速导航
 
 ### 新手入门
-- [快速开始](Quick-Start.md) - 5 分钟部署指南
-- [配置指南](Configuration-Guide.md) - 完整配置说明
+- [快速开始](docs/Quick-Start.md) - 5 分钟部署指南
+- [配置指南](docs/Configuration-Guide.md) - 完整配置说明
 - [常见问题](FAQ.md) - 50+ 问题解答
 
 ### 使用指南
-- [Bot 命令大全](Bot-Commands.md) - 所有命令详解
-- [转发下载教程](Forward-Download.md) - 最简单的使用方式
-- [历史浏览功能](Browse-History.md) - 浏览和精确下载
-- [自动监听配置](Auto-Monitor.md) - 24/7 自动备份
+- [Bot 命令大全](docs/Bot-Commands.md) - 所有命令详解
+- [转发下载教程](docs/Forward-Download.md) - 最简单的使用方式
+- 历史浏览功能 - 浏览和精确下载（包含在 Bot 命令中）
+- 自动监听配置 - 24/7 自动备份（包含在配置指南中）
 
 ### 部署方式
 - [Docker 部署](Docker-Deployment.md) - 推荐方式

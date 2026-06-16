@@ -239,10 +239,11 @@ Bot: "✅ 下载完成！"
 
 ## 📚 文档
 
-- [完整配置指南](../../wiki/配置指南)
-- [Bot 命令详解](../../wiki/Bot命令)
-- [Docker 部署](../../wiki/Docker部署)
-- [常见问题](../../wiki/FAQ)
+- [快速开始](docs/Quick-Start.md)
+- [Bot 命令大全](docs/Bot-Commands.md)
+- [配置指南](docs/Configuration-Guide.md)
+- [转发下载教程](docs/Forward-Download.md)
+- [常见问题](FAQ.md)
 - [开发路线图](ROADMAP.md)
 
 ---
