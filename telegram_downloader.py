@@ -363,7 +363,13 @@ class MediaDownloader:
             if self.uploader:
                 await self._upload_to_cloud(file_path, chat_title)
 
-            return file_path
+            # 返回下载信息（用于 Bot 显示）
+            return {
+                'file_path': file_path,
+                'file_name': filename,
+                'file_size': file_size,
+                'chat_title': chat_title
+            }
 
         except FloodWaitError as e:
             logger.warning(f"触发限流，需等待 {e.seconds} 秒")
