@@ -160,17 +160,22 @@ class MediaDownloader:
         # 检查是否已下载
         msg_id = self._get_message_id(message)
         if msg_id in self.downloaded_ids:
+            logger.debug(f"跳过: 消息 {msg_id} 已下载")
             return False, "已下载过"
 
         # 检查是否有媒体
         if not message.media:
+            logger.debug(f"跳过: 消息 {msg_id} 无媒体")
             return False, "无媒体文件"
 
         # 检查媒体类型
         media_types = self.tg_config.get('media_types', [])
+        logger.info(f"配置的媒体类型: {media_types}")
+        logger.info(f"消息媒体类型: {type(message.media).__name__}")
 
         if isinstance(message.media, MessageMediaPhoto):
             if 'photo' not in media_types:
+                logger.debug(f"跳过: 照片类型被排除")
                 return False, "照片类型被排除"
 
         elif isinstance(message.media, MessageMediaDocument):
@@ -178,47 +183,59 @@ class MediaDownloader:
 
             # 检查文件大小
             size_limit = self.tg_config.get('file_size_limit', 2 * 1024 * 1024 * 1024)
+            logger.info(f"文件大小: {doc.size / 1024 / 1024:.2f} MB, 限制: {size_limit / 1024 / 1024:.2f} MB")
             if doc.size > size_limit:
                 return False, f"文件太大: {doc.size / 1024 / 1024:.2f} MB"
 
             # 获取文件名和扩展名
             filename = self._get_filename(message)
             ext = Path(filename).suffix.lower()
+            logger.info(f"文件名: {filename}, 扩展名: {ext}")
 
             # 检查黑名单
             blacklist = self.tg_config.get('extensions_blacklist', [])
             if ext in blacklist:
+                logger.debug(f"跳过: 扩展名 {ext} 在黑名单中")
                 return False, f"扩展名被排除: {ext}"
 
             # 检查白名单（如果设置了）
             whitelist = self.tg_config.get('extensions_whitelist', [])
             if whitelist and ext not in whitelist:
+                logger.debug(f"跳过: 扩展名 {ext} 不在白名单中")
                 return False, f"扩展名不在白名单: {ext}"
 
             # 检查文档类型（通过 MIME 类型判断）
             mime_type = doc.mime_type
+            logger.info(f"MIME 类型: {mime_type}")
 
             # 判断具体媒体类型
             is_video = 'video' in mime_type
             is_audio = 'audio' in mime_type
 
+            logger.info(f"是否视频: {is_video}, 是否音频: {is_audio}")
+
             # 视频类型检查
             if is_video and 'video' not in media_types:
+                logger.debug(f"跳过: 视频类型被排除")
                 return False, "视频类型被排除"
 
             # 音频类型检查
             if is_audio and 'audio' not in media_types:
+                logger.debug(f"跳过: 音频类型被排除")
                 return False, "音频类型被排除"
 
             # 其他文档类型检查（不是视频也不是音频）
             if not is_video and not is_audio and 'document' not in media_types:
+                logger.debug(f"跳过: 文档类型被排除")
                 return False, "文档类型被排除"
 
         elif isinstance(message.media, MessageMediaWebPage):
             return False, "网页链接"
         else:
+            logger.warning(f"不支持的媒体类型: {type(message.media)}")
             return False, f"不支持的媒体类型: {type(message.media)}"
 
+        logger.info(f"✓ 消息 {msg_id} 通过所有过滤")
         return True, None
 
     def _get_filename(self, message) -> str:
