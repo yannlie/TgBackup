@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Telegram Media Downloader with OneDrive Auto Upload
-完整的 TG 媒体下载器，支持监听频道/群组并自动上传到 OneDrive
+Telegram Media Downloader with Cloud Auto Upload
+完整的 TG 媒体下载器，支持监听频道/群组并自动上传到云盘
 
-Version: 1.0.0
+Version: 1.3.0
 Features:
 - 监听多个频道/群组
 - 自动下载媒体文件（照片、视频、文档等）
 - 文件类型过滤
-- 自动上传到 OneDrive
+- 自动上传到 OneDrive / Rclone (60+ 云盘)
 - 实时进度显示
 - 断点续传
 """
@@ -31,12 +31,20 @@ from telethon.tl.types import (
 )
 from telethon.errors import FloodWaitError
 
-# 导入我们的 OneDrive 上传器
+# 导入上传器
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from tg_to_onedrive import OneDriveUploader, Config, UploadFilter
+try:
+    from tg_to_onedrive import OneDriveUploader, Config, UploadFilter
+except ImportError:
+    OneDriveUploader = None
 
-__version__ = "1.0.0"
+try:
+    from rclone_uploader import RcloneUploader
+except ImportError:
+    RcloneUploader = None
+
+__version__ = "1.3.0"
 
 # 配置日志
 logging.basicConfig(
@@ -114,13 +122,32 @@ class MediaDownloader:
         self.download_path = Path(tg_config.get('download_path', './downloads'))
         self.download_path.mkdir(parents=True, exist_ok=True)
 
-        # 初始化 OneDrive 上传器
+        # 初始化上传器
         self.uploader = None
         self.upload_filter = None
-        if onedrive_config and tg_config.get('auto_upload', True):
+        self.uploader_type = None  # 'onedrive' 或 'rclone'
+
+        # 优先使用 Rclone（如果配置了）
+        rclone_config = tg_config.get('upload_rclone', {})
+        if rclone_config.get('enable', False) and RcloneUploader:
+            try:
+                self.uploader = RcloneUploader(
+                    remote_dir=rclone_config.get('remote_dir', 'onedrive:/TgBackup'),
+                    rclone_path=rclone_config.get('rclone_path', 'rclone'),
+                    before_upload_zip=rclone_config.get('before_upload_zip', False),
+                    after_upload_delete=rclone_config.get('after_upload_delete', False)
+                )
+                self.uploader_type = 'rclone'
+                logger.info(f"✓ Rclone 上传器已启用: {rclone_config.get('remote_dir')}")
+            except Exception as e:
+                logger.error(f"Rclone 初始化失败: {e}")
+
+        # 回退到 OneDrive（如果 Rclone 未配置）
+        elif onedrive_config and tg_config.get('auto_upload', False) and OneDriveUploader:
             try:
                 self.uploader = OneDriveUploader(onedrive_config)
                 self.upload_filter = UploadFilter(onedrive_config)
+                self.uploader_type = 'onedrive'
                 logger.info("✓ OneDrive 上传器已启用")
             except Exception as e:
                 logger.warning(f"OneDrive 上传器初始化失败: {e}")
@@ -332,9 +359,9 @@ class MediaDownloader:
             self.downloaded_ids.add(self._get_message_id(message))
             self._save_download_record()
 
-            # 自动上传到 OneDrive
+            # 自动上传到云盘
             if self.uploader:
-                await self._upload_to_onedrive(file_path, chat_title)
+                await self._upload_to_cloud(file_path, chat_title)
 
             return file_path
 
@@ -348,38 +375,58 @@ class MediaDownloader:
             self.stats['failed'] += 1
             return None
 
-    async def _upload_to_onedrive(self, file_path: Path, chat_title: str):
-        """上传文件到 OneDrive"""
+    async def _upload_to_cloud(self, file_path: Path, chat_title: str):
+        """上传文件到云盘（支持 OneDrive 和 Rclone）"""
         try:
-            # 过滤检查
-            if self.upload_filter:
-                should_upload, reason = self.upload_filter.should_upload(file_path)
-                if not should_upload:
-                    logger.info(f"跳过上传: {file_path.name}, 原因: {reason}")
-                    return
+            if self.uploader_type == 'rclone':
+                # Rclone 上传
+                remote_path = f"{chat_title}/{file_path.name}"
 
-            # 构建远程路径（保留频道名称）
-            remote_path = f"{chat_title}/{file_path.name}"
+                loop = asyncio.get_event_loop()
+                success, message = await loop.run_in_executor(
+                    None,
+                    self.uploader.upload_file,
+                    str(file_path),
+                    remote_path
+                )
 
-            # 在异步环境中运行同步上传
-            loop = asyncio.get_event_loop()
-            success = await loop.run_in_executor(
-                None,
-                self.uploader.upload_file,
-                file_path,
-                remote_path
-            )
+                if success:
+                    self.stats['uploaded'] += 1
+                    logger.info(f"✓ 已上传到云盘: {remote_path}")
+                else:
+                    logger.error(f"上传失败: {message}")
 
-            if success:
-                self.stats['uploaded'] += 1
+            elif self.uploader_type == 'onedrive':
+                # OneDrive 上传（原逻辑）
+                # 过滤检查
+                if self.upload_filter:
+                    should_upload, reason = self.upload_filter.should_upload(file_path)
+                    if not should_upload:
+                        logger.info(f"跳过上传: {file_path.name}, 原因: {reason}")
+                        return
 
-                # 上传成功后删除本地文件
-                if self.tg_config.get('delete_after_upload', False):
-                    try:
-                        os.remove(file_path)
-                        logger.info(f"已删除本地文件: {file_path.name}")
-                    except Exception as e:
-                        logger.error(f"删除文件失败: {e}")
+                # 构建远程路径（保留频道名称）
+                remote_path = f"{chat_title}/{file_path.name}"
+
+                # 在异步环境中运行同步上传
+                loop = asyncio.get_event_loop()
+                success = await loop.run_in_executor(
+                    None,
+                    self.uploader.upload_file,
+                    file_path,
+                    remote_path
+                )
+
+                if success:
+                    self.stats['uploaded'] += 1
+
+                    # 上传成功后删除本地文件
+                    if self.tg_config.get('delete_after_upload', False):
+                        try:
+                            os.remove(file_path)
+                            logger.info(f"已删除本地文件: {file_path.name}")
+                        except Exception as e:
+                            logger.error(f"删除文件失败: {e}")
 
         except Exception as e:
             logger.error(f"上传失败: {file_path.name}, 错误: {e}")
