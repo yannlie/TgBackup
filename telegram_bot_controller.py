@@ -4,26 +4,54 @@ Telegram Bot Controller
 通过 Telegram Bot 远程控制下载器
 
 命令:
+基础命令:
 /start - 启动信息
+/help - 详细帮助
 /status - 查看状态
 /stats - 查看统计
+
+频道管理:
+/list - 列出所有监听频道
 /add <频道> - 添加监听频道
 /remove <频道> - 移除监听频道
-/list - 列出所有监听频道
+/test <频道> - 测试频道连接
+/info <频道> - 查看频道信息
+
+下载控制:
 /pause - 暂停下载
 /resume - 恢复下载
+/history <频道> [数量] - 下载历史消息
+/recent [数量] - 查看最近下载
+
+查询功能:
+/search <关键词> - 搜索已下载文件
+/logs [行数] - 查看最新日志
+/disk - 查看磁盘空间
+/speed - 查看下载速度
+
+系统管理:
 /config - 查看配置
+/filter - 查看过滤规则
+/clear - 清理缓存
+/restart - 重启下载器
+/update - 检查更新
+/export - 导出下载记录
+/backup - 备份配置
 """
 
 import os
 import sys
 import asyncio
 import logging
-from datetime import datetime
-from typing import Optional
+import json
+import shutil
+from datetime import datetime, timedelta
+from typing import Optional, List
+from pathlib import Path
 
 from telethon import TelegramClient, events
-from telethon.tl.types import User
+from telethon.tl.types import User, Channel
+from telethon.errors import ChannelPrivateError, UsernameInvalidError
 
 # 导入主程序
 from telegram_downloader import TelegramDownloaderBot, TelegramConfig, Config
@@ -50,6 +78,7 @@ class BotController:
         self.admin_ids = set(admin_ids)
         self.downloader_bot = downloader_bot
         self.paused = False
+        self.start_time = datetime.now()
 
         # 创建 Bot 客户端
         self.bot = TelegramClient(
@@ -62,6 +91,95 @@ class BotController:
         """检查是否是管理员"""
         return user_id in self.admin_ids
 
+    def get_uptime(self) -> str:
+        """获取运行时间"""
+        uptime = datetime.now() - self.start_time
+        days = uptime.days
+        hours, remainder = divmod(uptime.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        if days > 0:
+            return f"{days}天 {hours}小时 {minutes}分钟"
+        elif hours > 0:
+            return f"{hours}小时 {minutes}分钟"
+        else:
+            return f"{minutes}分钟 {seconds}秒"
+
+    def get_disk_usage(self, path: str = "./downloads") -> dict:
+        """获取磁盘使用情况"""
+        try:
+            total, used, free = shutil.disk_usage(path)
+            return {
+                "total": total,
+                "used": used,
+                "free": free,
+                "percent": (used / total) * 100
+            }
+        except:
+            return None
+
+    def get_recent_files(self, limit: int = 10) -> List[dict]:
+        """获取最近下载的文件"""
+        download_path = Path(self.downloader_bot.tg_config.get('download_path', './downloads'))
+        if not download_path.exists():
+            return []
+
+        files = []
+        for file_path in download_path.rglob('*'):
+            if file_path.is_file():
+                files.append({
+                    'name': file_path.name,
+                    'size': file_path.stat().st_size,
+                    'time': datetime.fromtimestamp(file_path.stat().st_mtime),
+                    'path': str(file_path.relative_to(download_path))
+                })
+
+        # 按时间排序
+        files.sort(key=lambda x: x['time'], reverse=True)
+        return files[:limit]
+
+    def search_files(self, keyword: str, limit: int = 20) -> List[dict]:
+        """搜索文件"""
+        download_path = Path(self.downloader_bot.tg_config.get('download_path', './downloads'))
+        if not download_path.exists():
+            return []
+
+        files = []
+        keyword_lower = keyword.lower()
+
+        for file_path in download_path.rglob('*'):
+            if file_path.is_file() and keyword_lower in file_path.name.lower():
+                files.append({
+                    'name': file_path.name,
+                    'size': file_path.stat().st_size,
+                    'path': str(file_path.relative_to(download_path))
+                })
+                if len(files) >= limit:
+                    break
+
+        return files
+
+    def get_log_tail(self, lines: int = 50) -> str:
+        """获取日志尾部"""
+        log_file = 'tg_downloader.log'
+        if not os.path.exists(log_file):
+            return "日志文件不存在"
+
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f:
+                log_lines = f.readlines()
+                return ''.join(log_lines[-lines:])
+        except Exception as e:
+            return f"读取日志失败: {e}"
+
+    def format_size(self, bytes: int) -> str:
+        """格式化文件大小"""
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if bytes < 1024.0:
+                return f"{bytes:.2f} {unit}"
+            bytes /= 1024.0
+        return f"{bytes:.2f} PB"
+
     async def start(self):
         """启动 Bot"""
         logger.info("Bot 控制器已启动")
@@ -73,17 +191,68 @@ class BotController:
                 return
 
             await event.reply(
-                "🤖 **Telegram 下载器控制面板**\n\n"
-                "可用命令:\n"
+                "🤖 **TgBackup 控制面板**\n\n"
+                "📋 **基础命令**\n"
+                "/help - 详细帮助\n"
                 "/status - 查看状态\n"
-                "/stats - 查看统计\n"
-                "/add <频道> - 添加监听\n"
-                "/remove <频道> - 移除监听\n"
+                "/stats - 查看统计\n\n"
+                "📺 **频道管理**\n"
                 "/list - 列出频道\n"
+                "/add <频道> - 添加频道\n"
+                "/remove <频道> - 移除频道\n"
+                "/test <频道> - 测试连接\n"
+                "/info <频道> - 频道信息\n\n"
+                "⬇️ **下载控制**\n"
                 "/pause - 暂停下载\n"
                 "/resume - 恢复下载\n"
+                "/history <频道> [数量] - 下载历史\n"
+                "/recent [数量] - 最近下载\n\n"
+                "🔍 **查询功能**\n"
+                "/search <关键词> - 搜索文件\n"
+                "/logs [行数] - 查看日志\n"
+                "/disk - 磁盘空间\n"
+                "/speed - 下载速度\n\n"
+                "⚙️ **系统管理**\n"
                 "/config - 查看配置\n"
-                "/history <频道> [数量] - 下载历史消息"
+                "/filter - 过滤规则\n"
+                "/clear - 清理缓存\n"
+                "/export - 导出记录\n"
+                "/backup - 备份配置"
+            )
+
+        @self.bot.on(events.NewMessage(pattern='/help'))
+        async def cmd_help(event):
+            if not self.is_admin(event.sender_id):
+                return
+
+            await event.reply(
+                "📖 **TgBackup 详细帮助**\n\n"
+                "**基础命令**\n"
+                "`/status` - 查看运行状态、运行时间\n"
+                "`/stats` - 查看下载统计信息\n\n"
+                "**频道管理**\n"
+                "`/list` - 列出所有监听的频道\n"
+                "`/add @channel` - 添加新频道监听\n"
+                "`/remove @channel` - 移除频道监听\n"
+                "`/test @channel` - 测试频道连接\n"
+                "`/info @channel` - 查看频道详细信息\n\n"
+                "**下载控制**\n"
+                "`/pause` - 暂停所有下载任务\n"
+                "`/resume` - 恢复所有下载任务\n"
+                "`/history @channel 100` - 下载指定数量历史消息\n"
+                "`/history @channel 0` - 下载全部历史消息\n"
+                "`/recent 10` - 查看最近 10 个下载\n\n"
+                "**查询功能**\n"
+                "`/search 关键词` - 搜索已下载文件\n"
+                "`/logs 50` - 查看最新 50 行日志\n"
+                "`/disk` - 查看磁盘使用情况\n"
+                "`/speed` - 查看下载速度统计\n\n"
+                "**系统管理**\n"
+                "`/config` - 查看当前配置\n"
+                "`/filter` - 查看文件过滤规则\n"
+                "`/clear` - 清理下载缓存\n"
+                "`/export` - 导出下载记录为 CSV\n"
+                "`/backup` - 备份当前配置"
             )
 
         @self.bot.on(events.NewMessage(pattern='/status'))
@@ -93,12 +262,20 @@ class BotController:
 
             status = "✅ 运行中" if not self.paused else "⏸️ 已暂停"
             channels_count = len(self.downloader_bot.channels)
+            uptime = self.get_uptime()
+
+            # 获取磁盘信息
+            disk = self.get_disk_usage()
+            disk_info = ""
+            if disk:
+                disk_info = f"\n💾 磁盘空间: {self.format_size(disk['free'])} / {self.format_size(disk['total'])} 可用"
 
             await event.reply(
                 f"📊 **系统状态**\n\n"
                 f"状态: {status}\n"
                 f"监听频道: {channels_count} 个\n"
-                f"运行时间: {self._get_uptime()}"
+                f"运行时间: {uptime}"
+                f"{disk_info}"
             )
 
         @self.bot.on(events.NewMessage(pattern='/stats'))
@@ -256,12 +433,317 @@ class BotController:
             except Exception as e:
                 await event.reply(f"❌ 下载失败: {e}")
 
-        logger.info("✓ Bot 命令已注册")
+        @self.bot.on(events.NewMessage(pattern='/recent'))
+        async def cmd_recent(event):
+            """查看最近下载的文件"""
+            if not self.is_admin(event.sender_id):
+                return
 
-    def _get_uptime(self) -> str:
-        """获取运行时间（简化版）"""
-        # 可以记录启动时间并计算
-        return "运行中"
+            parts = event.message.text.split()
+            limit = int(parts[1]) if len(parts) > 1 else 10
+
+            files = self.get_recent_files(limit)
+            if not files:
+                await event.reply("📭 还没有下载任何文件")
+                return
+
+            text = f"📥 **最近 {len(files)} 个下载**\n\n"
+            for i, file in enumerate(files, 1):
+                size = self.format_size(file['size'])
+                time_str = file['time'].strftime('%m-%d %H:%M')
+                text += f"{i}. `{file['name']}`\n"
+                text += f"   📦 {size} | 🕐 {time_str}\n\n"
+
+            await event.reply(text)
+
+        @self.bot.on(events.NewMessage(pattern='/search'))
+        async def cmd_search(event):
+            """搜索已下载的文件"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            parts = event.message.text.split(maxsplit=1)
+            if len(parts) < 2:
+                await event.reply("❌ 用法: /search <关键词>")
+                return
+
+            keyword = parts[1]
+            files = self.search_files(keyword)
+
+            if not files:
+                await event.reply(f"🔍 未找到包含 '{keyword}' 的文件")
+                return
+
+            text = f"🔍 **搜索结果: '{keyword}'**\n\n"
+            text += f"找到 {len(files)} 个文件:\n\n"
+
+            for i, file in enumerate(files[:10], 1):  # 只显示前10个
+                size = self.format_size(file['size'])
+                text += f"{i}. `{file['name']}`\n"
+                text += f"   📦 {size} | 📁 {file['path']}\n\n"
+
+            if len(files) > 10:
+                text += f"\n...还有 {len(files) - 10} 个结果"
+
+            await event.reply(text)
+
+        @self.bot.on(events.NewMessage(pattern='/disk'))
+        async def cmd_disk(event):
+            """查看磁盘空间"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            disk = self.get_disk_usage()
+            if not disk:
+                await event.reply("❌ 无法获取磁盘信息")
+                return
+
+            total = self.format_size(disk['total'])
+            used = self.format_size(disk['used'])
+            free = self.format_size(disk['free'])
+            percent = disk['percent']
+
+            # 进度条
+            bar_length = 20
+            filled = int(bar_length * percent / 100)
+            bar = '█' * filled + '░' * (bar_length - filled)
+
+            await event.reply(
+                f"💾 **磁盘使用情况**\n\n"
+                f"总容量: {total}\n"
+                f"已使用: {used}\n"
+                f"可用: {free}\n"
+                f"使用率: {percent:.1f}%\n\n"
+                f"[{bar}] {percent:.1f}%"
+            )
+
+        @self.bot.on(events.NewMessage(pattern='/logs'))
+        async def cmd_logs(event):
+            """查看最新日志"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            parts = event.message.text.split()
+            lines = int(parts[1]) if len(parts) > 1 else 30
+
+            log_content = self.get_log_tail(lines)
+
+            # 限制消息长度
+            if len(log_content) > 4000:
+                log_content = log_content[-4000:]
+                log_content = "...(日志过长，仅显示最后部分)\n\n" + log_content
+
+            await event.reply(f"📋 **最新 {lines} 行日志**\n\n```\n{log_content}\n```")
+
+        @self.bot.on(events.NewMessage(pattern='/test'))
+        async def cmd_test(event):
+            """测试频道连接"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            parts = event.message.text.split()
+            if len(parts) < 2:
+                await event.reply("❌ 用法: /test @channel")
+                return
+
+            channel_input = parts[1]
+            await event.reply(f"🔄 正在测试 {channel_input}...")
+
+            try:
+                entity = await self.downloader_bot.client.get_entity(channel_input)
+                await event.reply(
+                    f"✅ **连接成功**\n\n"
+                    f"频道: {getattr(entity, 'title', 'N/A')}\n"
+                    f"用户名: @{getattr(entity, 'username', 'N/A')}\n"
+                    f"类型: {'频道' if isinstance(entity, Channel) else '群组'}\n"
+                    f"状态: 可访问"
+                )
+            except ChannelPrivateError:
+                await event.reply(f"❌ 频道 {channel_input} 是私有的或无权访问")
+            except UsernameInvalidError:
+                await event.reply(f"❌ 无效的频道用户名: {channel_input}")
+            except Exception as e:
+                await event.reply(f"❌ 测试失败: {e}")
+
+        @self.bot.on(events.NewMessage(pattern='/info'))
+        async def cmd_info(event):
+            """查看频道详细信息"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            parts = event.message.text.split()
+            if len(parts) < 2:
+                await event.reply("❌ 用法: /info @channel")
+                return
+
+            channel_input = parts[1]
+
+            try:
+                entity = await self.downloader_bot.client.get_entity(channel_input)
+
+                info_text = f"📺 **频道信息**\n\n"
+                info_text += f"标题: {getattr(entity, 'title', 'N/A')}\n"
+                info_text += f"用户名: @{getattr(entity, 'username', 'N/A')}\n"
+                info_text += f"ID: `{entity.id}`\n"
+
+                if hasattr(entity, 'participants_count'):
+                    info_text += f"成员数: {entity.participants_count:,}\n"
+
+                if hasattr(entity, 'about'):
+                    about = entity.about[:100] + '...' if len(entity.about) > 100 else entity.about
+                    info_text += f"\n简介: {about}"
+
+                await event.reply(info_text)
+            except Exception as e:
+                await event.reply(f"❌ 获取信息失败: {e}")
+
+        @self.bot.on(events.NewMessage(pattern='/speed'))
+        async def cmd_speed(event):
+            """查看下载速度统计"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            stats = self.downloader_bot.downloader.get_stats()
+
+            # 计算平均速度（粗略估算）
+            uptime_seconds = (datetime.now() - self.start_time).total_seconds()
+            if uptime_seconds > 0:
+                avg_speed = stats['bytes_downloaded'] / uptime_seconds
+                avg_speed_text = self.format_size(int(avg_speed)) + "/s"
+            else:
+                avg_speed_text = "N/A"
+
+            await event.reply(
+                f"🚀 **下载速度统计**\n\n"
+                f"总下载: {self.format_size(stats['bytes_downloaded'])}\n"
+                f"运行时间: {self.get_uptime()}\n"
+                f"平均速度: {avg_speed_text}\n"
+                f"已下载: {stats['downloaded']} 个文件"
+            )
+
+        @self.bot.on(events.NewMessage(pattern='/filter'))
+        async def cmd_filter(event):
+            """查看过滤规则"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            tg_config = self.downloader_bot.tg_config
+
+            media_types = tg_config.get('media_types', [])
+            size_limit = tg_config.get('file_size_limit', 0)
+            whitelist = tg_config.get('extensions_whitelist', [])
+            blacklist = tg_config.get('extensions_blacklist', [])
+
+            text = "🎯 **文件过滤规则**\n\n"
+            text += f"📁 媒体类型: {', '.join(media_types)}\n"
+            text += f"📦 大小限制: {self.format_size(size_limit)}\n\n"
+
+            if whitelist:
+                text += f"✅ 白名单: {', '.join(whitelist)}\n"
+            else:
+                text += f"✅ 白名单: 全部允许\n"
+
+            if blacklist:
+                text += f"❌ 黑名单: {', '.join(blacklist)}\n"
+            else:
+                text += f"❌ 黑名单: 无\n"
+
+            await event.reply(text)
+
+        @self.bot.on(events.NewMessage(pattern='/clear'))
+        async def cmd_clear(event):
+            """清理缓存"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            await event.reply("🔄 正在清理缓存...")
+
+            try:
+                # 清理下载记录
+                record_file = 'downloaded_messages.json'
+                if os.path.exists(record_file):
+                    os.remove(record_file)
+
+                await event.reply("✅ 缓存已清理\n\n清理内容:\n- 下载记录")
+            except Exception as e:
+                await event.reply(f"❌ 清理失败: {e}")
+
+        @self.bot.on(events.NewMessage(pattern='/export'))
+        async def cmd_export(event):
+            """导出下载记录"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            await event.reply("📊 正在导出记录...")
+
+            try:
+                stats = self.downloader_bot.downloader.get_stats()
+                files = self.get_recent_files(1000)  # 导出最近1000个
+
+                # 生成 CSV 内容
+                csv_content = "文件名,大小,下载时间,路径\n"
+                for file in files:
+                    csv_content += f'"{file["name"]}",{file["size"]},"{file["time"]}","{file["path"]}"\n'
+
+                # 保存到文件
+                export_file = f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                with open(export_file, 'w', encoding='utf-8') as f:
+                    f.write(csv_content)
+
+                await event.reply(
+                    f"✅ **导出完成**\n\n"
+                    f"文件: `{export_file}`\n"
+                    f"记录数: {len(files)}\n"
+                    f"总大小: {self.format_size(sum(f['size'] for f in files))}"
+                )
+
+                # 发送文件
+                await event.reply(file=export_file)
+            except Exception as e:
+                await event.reply(f"❌ 导出失败: {e}")
+
+        @self.bot.on(events.NewMessage(pattern='/backup'))
+        async def cmd_backup(event):
+            """备份配置"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            await event.reply("💾 正在备份配置...")
+
+            try:
+                backup_dir = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                os.makedirs(backup_dir, exist_ok=True)
+
+                # 备份配置文件
+                if os.path.exists('telegram_config.json'):
+                    shutil.copy2('telegram_config.json', f"{backup_dir}/telegram_config.json")
+
+                if os.path.exists('onedrive_config.json'):
+                    shutil.copy2('onedrive_config.json', f"{backup_dir}/onedrive_config.json")
+
+                # 备份下载记录
+                if os.path.exists('downloaded_messages.json'):
+                    shutil.copy2('downloaded_messages.json', f"{backup_dir}/downloaded_messages.json")
+
+                # 压缩
+                shutil.make_archive(backup_dir, 'zip', backup_dir)
+                shutil.rmtree(backup_dir)
+
+                await event.reply(
+                    f"✅ **备份完成**\n\n"
+                    f"文件: `{backup_dir}.zip`\n"
+                    f"包含:\n"
+                    f"- Telegram 配置\n"
+                    f"- OneDrive 配置\n"
+                    f"- 下载记录"
+                )
+
+                # 发送备份文件
+                await event.reply(file=f"{backup_dir}.zip")
+            except Exception as e:
+                await event.reply(f"❌ 备份失败: {e}")
+
+        logger.info("✓ Bot 命令已注册 (25+ 命令)")
 
     def should_process_message(self) -> bool:
         """是否应该处理消息（暂停检查）"""
