@@ -382,7 +382,7 @@ class TelegramDownloaderBot:
 
         # 初始化 Telegram 客户端
         self.client = TelegramClient(
-            'downloader_session',
+            'sessions/downloader_session',
             int(tg_config.get('api_id')),
             tg_config.get('api_hash')
         )

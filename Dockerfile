@@ -27,7 +27,7 @@ COPY telegram_downloader.py \
      ./
 
 # 创建必要的目录
-RUN mkdir -p /app/downloads /app/config /app/logs
+RUN mkdir -p /app/downloads /app/config /app/logs /app/sessions
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1

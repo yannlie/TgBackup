@@ -82,7 +82,7 @@ class BotController:
 
         # 创建 Bot 客户端（不要立即 start）
         self.bot = TelegramClient(
-            'bot_session',
+            'sessions/bot_session',
             downloader_bot.tg_config.get('api_id'),
             downloader_bot.tg_config.get('api_hash')
         )
