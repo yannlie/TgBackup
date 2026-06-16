@@ -1,188 +1,150 @@
 """文件路径和文件名生成器"""
+# ponytail: stdlib Path.joinpath + regex does it
+
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 
+def make_path(
+    base_path: str,
+    chat_title: str = "Unknown",
+    media_type: str = "document",
+    media_date: Optional[datetime] = None,
+    date_format: str = "%Y_%m",
+    path_parts: list = None
+) -> Path:
+    """
+    生成文件保存路径
+
+    Args:
+        base_path: 基础路径
+        chat_title: 频道标题
+        media_type: 媒体类型
+        media_date: 媒体日期
+        date_format: 日期格式
+        path_parts: 路径组件 ['chat_title', 'media_datetime', 'media_type']
+
+    Returns:
+        完整路径
+    """
+    if media_date is None:
+        media_date = datetime.now()
+
+    path_parts = path_parts or ["chat_title"]
+
+    # ponytail: regex for sanitize, no class needed
+    def clean(s):
+        s = re.sub(r'[<>:"/\\|?*]', '_', s or 'Unknown')[:50].strip()
+        return s or 'Unknown'
+
+    parts = []
+    for part in path_parts:
+        if part == "chat_title":
+            parts.append(clean(chat_title))
+        elif part == "media_datetime":
+            parts.append(media_date.strftime(date_format))
+        elif part == "media_type":
+            parts.append(media_type)
+
+    return Path(base_path).joinpath(*parts)
+
+
+def make_filename(
+    message_id: int,
+    original_filename: str = "",
+    caption: str = "",
+    extension: str = "",
+    separator: str = " - ",
+    filename_parts: list = None
+) -> str:
+    """
+    生成文件名
+
+    Args:
+        message_id: 消息 ID
+        original_filename: 原始文件名
+        caption: 消息标题
+        extension: 文件扩展名
+        separator: 分隔符
+        filename_parts: 文件名组件 ['message_id', 'file_name', 'caption']
+
+    Returns:
+        生成的文件名
+    """
+    filename_parts = filename_parts or ["message_id", "file_name"]
+
+    # ponytail: inline sanitize
+    def clean(s, max_len=50):
+        s = re.sub(r'[<>:"/\\|?*@]', '_', s)
+        s = re.sub(r'https?://\S+', '', s)
+        s = re.sub(r'\s+', ' ', s).strip()
+        return s[:max_len] if s else ''
+
+    parts = []
+    for part in filename_parts:
+        if part == "message_id":
+            parts.append(str(message_id))
+        elif part == "file_name" and original_filename:
+            name = Path(original_filename).stem
+            if cleaned := clean(name):
+                parts.append(cleaned)
+        elif part == "caption" and caption:
+            if cleaned := clean(caption):
+                parts.append(cleaned)
+
+    if not parts:
+        parts = [str(message_id)]
+
+    filename = separator.join(parts)
+
+    if extension and not extension.startswith('.'):
+        extension = f'.{extension}'
+    if extension and not filename.endswith(extension):
+        filename += extension
+
+    return filename
+
+
+# Backward compatibility
 class PathGenerator:
-    """路径生成器"""
-
-    def __init__(
-        self,
-        base_path: str,
-        file_path_prefix: List[str] = None,
-        file_name_prefix: List[str] = None,
-        file_name_split: str = " - ",
-        date_format: str = "%Y_%m"
-    ):
-        """
-        Args:
-            base_path: 基础下载路径
-            file_path_prefix: 路径前缀列表 (chat_title, media_datetime, media_type)
-            file_name_prefix: 文件名前缀列表 (message_id, file_name, caption)
-            file_name_split: 文件名分隔符
-            date_format: 日期格式
-        """
-        self.base_path = Path(base_path)
+    """Compatibility wrapper"""
+    def __init__(self, base_path, file_path_prefix=None, file_name_prefix=None,
+                 file_name_split=" - ", date_format="%Y_%m"):
+        self.base_path = base_path
         self.file_path_prefix = file_path_prefix or ["chat_title"]
         self.file_name_prefix = file_name_prefix or ["file_name"]
         self.file_name_split = file_name_split
         self.date_format = date_format
 
-    def generate_path(
-        self,
-        chat_title: str = "Unknown",
-        media_type: str = "document",
-        media_date: Optional[datetime] = None
-    ) -> Path:
-        """
-        生成文件保存路径
+    def generate_path(self, chat_title="Unknown", media_type="document", media_date=None):
+        return make_path(self.base_path, chat_title, media_type, media_date,
+                        self.date_format, self.file_path_prefix)
 
-        Args:
-            chat_title: 频道/群组标题
-            media_type: 媒体类型
-            media_date: 媒体日期
-
-        Returns:
-            完整路径
-        """
-        if media_date is None:
-            media_date = datetime.now()
-
-        # 构建路径组件
-        components = []
-        for prefix in self.file_path_prefix:
-            if prefix == "chat_title":
-                components.append(self._sanitize(chat_title))
-            elif prefix == "media_datetime":
-                components.append(media_date.strftime(self.date_format))
-            elif prefix == "media_type":
-                components.append(media_type)
-
-        # 组合路径
-        path = self.base_path
-        for component in components:
-            path = path / component
-
-        return path
-
-    def generate_filename(
-        self,
-        message_id: int,
-        original_filename: str = "",
-        caption: str = "",
-        extension: str = ""
-    ) -> str:
-        """
-        生成文件名
-
-        Args:
-            message_id: 消息 ID
-            original_filename: 原始文件名
-            caption: 消息标题
-            extension: 文件扩展名
-
-        Returns:
-            生成的文件名
-        """
-        # 构建文件名组件
-        components = []
-        for prefix in self.file_name_prefix:
-            if prefix == "message_id":
-                components.append(str(message_id))
-            elif prefix == "file_name" and original_filename:
-                # 移除扩展名
-                name = Path(original_filename).stem
-                components.append(self._sanitize(name))
-            elif prefix == "caption" and caption:
-                # 清理 caption
-                clean_caption = self._clean_caption(caption)
-                if clean_caption:
-                    components.append(clean_caption)
-
-        # 如果没有有效组件，使用消息 ID
-        if not components:
-            components = [str(message_id)]
-
-        # 组合文件名
-        filename = self.file_name_split.join(components)
-
-        # 添加扩展名
-        if extension and not extension.startswith('.'):
-            extension = f".{extension}"
-        if not filename.endswith(extension):
-            filename += extension
-
-        return filename
-
-    def _sanitize(self, name: str, max_length: int = 50) -> str:
-        """
-        清理文件名/路径名
-
-        Args:
-            name: 原始名称
-            max_length: 最大长度
-
-        Returns:
-            清理后的名称
-        """
-        # 移除非法字符
-        name = re.sub(r'[<>:"/\\|?*]', '_', name)
-        # 移除前后空格
-        name = name.strip()
-        # 限制长度
-        if len(name) > max_length:
-            name = name[:max_length]
-        # 如果为空，使用默认
-        if not name:
-            name = "Untitled"
-        return name
-
-    def _clean_caption(self, caption: str, max_length: int = 50) -> str:
-        """
-        清理 caption 作为文件名
-
-        Args:
-            caption: 原始 caption
-            max_length: 最大长度
-
-        Returns:
-            清理后的 caption
-        """
-        # 移除 @ 提及
-        caption = re.sub(r'@\w+', '', caption)
-        # 移除 URL
-        caption = re.sub(r'https?://\S+', '', caption)
-        # 移除多余空格
-        caption = re.sub(r'\s+', ' ', caption)
-        # 移除换行
-        caption = caption.replace('\n', ' ')
-        # 清理并限制长度
-        return self._sanitize(caption, max_length)
+    def generate_filename(self, message_id, original_filename="", caption="", extension=""):
+        return make_filename(message_id, original_filename, caption, extension,
+                           self.file_name_split, self.file_name_prefix)
 
 
 if __name__ == "__main__":
-    # 测试
-    generator = PathGenerator(
-        base_path="./downloads",
-        file_path_prefix=["chat_title", "media_datetime"],
-        file_name_prefix=["message_id", "file_name"],
-        date_format="%Y_%m"
-    )
-
-    # 测试路径生成
-    path = generator.generate_path(
-        chat_title="Test Channel",
-        media_type="video",
-        media_date=datetime(2024, 6, 16)
+    # Test
+    path = make_path(
+        "./downloads",
+        "Test Channel",
+        "video",
+        datetime(2024, 6, 16),
+        "%Y_%m",
+        ["chat_title", "media_datetime"]
     )
     print(f"Path: {path}")
 
-    # 测试文件名生成
-    filename = generator.generate_filename(
-        message_id=12345,
-        original_filename="test_video.mp4",
-        caption="这是一个测试视频 @someone https://example.com"
+    filename = make_filename(
+        12345,
+        "test_video.mp4",
+        "这是测试 @user https://example.com",
+        ".mp4",
+        " - ",
+        ["message_id", "file_name"]
     )
     print(f"Filename: {filename}")
