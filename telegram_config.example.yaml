@@ -1,0 +1,148 @@
+# Telegram 配置文件 (YAML 格式)
+# 比 JSON 更易读，支持注释
+
+# ============================================================
+# 必填配置
+# ============================================================
+
+# Telegram API 凭证 (从 https://my.telegram.org/apps 获取)
+api_id: YOUR_API_ID
+api_hash: YOUR_API_HASH
+
+# 登录手机号（国际格式）
+phone: "+8612345678900"
+
+# Bot Token (从 @BotFather 获取)
+bot_token: "YOUR_BOT_TOKEN"
+
+# 管理员 User ID 列表 (从 @userinfobot 获取)
+admin_ids:
+  - 123456789
+
+# ============================================================
+# 频道配置（多频道支持）
+# ============================================================
+
+channels:
+  - chat_id: "@channel_username"
+    last_read_message_id: 0
+    download_filter: ""  # 可选：过滤器表达式
+
+  # 示例：添加更多频道
+  # - chat_id: -1001234567890
+  #   last_read_message_id: 0
+  #   download_filter: "message_date >= 2024-01-01"
+
+# ============================================================
+# 下载配置
+# ============================================================
+
+# 下载路径
+download_path: "./downloads"
+
+# 媒体类型
+media_types:
+  - photo
+  - video
+  - document
+  - audio
+  - voice
+  - video_note
+
+# 文件大小限制 (字节，默认 2GB)
+file_size_limit: 2147483648
+
+# 扩展名白名单（为空则不限制）
+extensions_whitelist: []
+
+# 扩展名黑名单
+extensions_blacklist:
+  - .exe
+  - .bat
+  - .cmd
+  - .sh
+
+# ============================================================
+# 文件路径自定义
+# ============================================================
+
+# 子目录结构（按顺序组合）
+# 可选值: chat_title, media_datetime, media_type
+file_path_prefix:
+  - chat_title      # 频道名称
+  - media_datetime  # 媒体日期
+
+# 日期格式
+date_format: "%Y_%m"  # 例如: 2024_06
+
+# 文件名前缀（按顺序组合）
+# 可选值: message_id, file_name, caption
+file_name_prefix:
+  - message_id
+  - file_name
+
+# 文件名分隔符
+file_name_prefix_split: " - "
+
+# ============================================================
+# 上传配置
+# ============================================================
+
+# OneDrive 上传
+upload_onedrive:
+  enable: false
+  remote_dir: "TgBackup"
+  delete_after_upload: false
+
+# Rclone 上传（支持所有云盘）
+upload_rclone:
+  enable: false
+  remote_dir: "drive:/telegram"  # rclone 远程路径
+  before_upload_zip: false       # 上传前压缩
+  after_upload_delete: false     # 上传后删除
+  rclone_path: "rclone"          # rclone 可执行文件路径
+
+# ============================================================
+# 性能配置
+# ============================================================
+
+# 最大并发下载任务数
+max_download_tasks: 5
+
+# 每分钟转发限制（防止被限制）
+forward_limit: 33
+
+# ============================================================
+# Web 界面配置
+# ============================================================
+
+web:
+  enable: false
+  host: "127.0.0.1"
+  port: 5000
+  login_secret: ""  # 留空则不需要登录
+
+# ============================================================
+# 高级配置
+# ============================================================
+
+# 代理设置（可选）
+# proxy:
+#   scheme: socks5
+#   hostname: 127.0.0.1
+#   port: 1080
+#   username: ""
+#   password: ""
+
+# 日志级别 (DEBUG, INFO, WARNING, ERROR)
+log_level: "INFO"
+
+# 允许使用 Bot 的用户（为空则只有 admin_ids）
+allowed_user_ids:
+  - "me"  # 当前登录用户
+
+# 下载文本消息
+enable_download_txt: false
+
+# 隐藏文件名（Web 界面）
+hide_file_name: false
