@@ -1,64 +1,8 @@
 {
-  "_comment": "=== 必需配置 ===",
   "api_id": "YOUR_API_ID",
   "api_hash": "YOUR_API_HASH",
   "phone": "+8612345678900",
-
-  "_comment2": "=== Bot 控制（强烈推荐） ===",
   "bot_token": "YOUR_BOT_TOKEN",
   "admin_ids": [123456789],
-
-  "_comment3": "=== 可选配置 ===",
-  "channels": [],
-
-  "_comment4": "=== 下载设置（使用默认值即可） ===",
-  "download_path": "./downloads",
-  "media_types": ["photo", "video", "document", "audio"],
-  "file_size_limit": 2147483648,
-
-  "_comment5": "=== 高级过滤（可选） ===",
-  "extensions_whitelist": [],
-  "extensions_blacklist": [".exe", ".bat", ".cmd", ".scr"],
-
-  "_comment6": "=== OneDrive 上传（需要单独配置 onedrive_config.json） ===",
-  "auto_upload": false,
-  "delete_after_upload": false,
-
-  "_comment7": "=== 配置说明 ===",
-  "instructions": {
-    "必需配置": {
-      "api_id": "在 https://my.telegram.org/apps 获取",
-      "api_hash": "在 https://my.telegram.org/apps 获取",
-      "phone": "你的手机号，格式: +86手机号"
-    },
-    "Bot控制": {
-      "bot_token": "从 @BotFather 获取，启用 Bot 远程控制功能",
-      "admin_ids": "与 @userinfobot 对话获取你的 User ID"
-    },
-    "可选配置": {
-      "channels": "监听的频道列表（可为空！）通过 Bot 的 /add 命令添加或直接转发消息下载"
-    },
-    "下载设置": {
-      "download_path": "下载文件保存目录",
-      "media_types": "要下载的媒体类型: photo/video/document/audio",
-      "file_size_limit": "文件大小限制（字节），默认 2GB = 2147483648"
-    },
-    "高级过滤": {
-      "extensions_whitelist": "扩展名白名单，留空=不限制。例: [\".mp4\", \".mkv\"] 只下载这些格式",
-      "extensions_blacklist": "扩展名黑名单，这些格式不会下载"
-    },
-    "OneDrive上传": {
-      "auto_upload": "下载后自动上传到 OneDrive（需要配置 onedrive_config.json）",
-      "delete_after_upload": "上传成功后删除本地文件（谨慎使用！）"
-    }
-  },
-
-  "_comment8": "=== 快速开始 ===",
-  "quickstart": {
-    "step1": "填写 api_id, api_hash, phone",
-    "step2": "填写 bot_token, admin_ids（从 @BotFather 和 @userinfobot 获取）",
-    "step3": "channels 留空即可",
-    "step4": "保存文件，启动程序",
-    "step5": "转发任意媒体消息给 Bot 即可下载！"
-  }
+  "channels": []
 }
