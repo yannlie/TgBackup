@@ -9,7 +9,7 @@
 [![Docker Hub](https://img.shields.io/docker/v/yannlie/tgbackup?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/yannlie/tgbackup)
 [![GitHub Release](https://img.shields.io/github/v/release/yannlie/TgBackup)](https://github.com/yannlie/TgBackup/releases)
 
-**转发即下载 · 自动备份 · 多云盘支持 · Web 监控**
+**转发即下载 · 自动备份 · 多云盘支持 · 轻量简洁**
 
 [快速开始](#-快速开始) · [功能特性](#-功能特性) · [使用文档](#-使用方式) · [配置指南](#-配置)
 
@@ -27,18 +27,18 @@
 | **☁️ 多云盘支持** | 支持 OneDrive、Google Drive、阿里云盘等 60+ 云存储 |
 | **📡 多频道监听** | 同时监听多个频道/群组，自动下载新消息 |
 | **🔍 智能过滤** | 按日期、文件类型、大小、扩展名过滤 |
-| **🌐 Web 监控** | 实时查看下载进度和统计 |
-| **🤖 Bot 控制** | 28+ 命令完整控制所有功能 |
+| **🤖 Bot 控制** | 核心命令完整控制所有功能 |
 | **📁 灵活路径** | 自定义目录结构和文件命名规则 |
 | **🐳 Docker 部署** | 一行命令部署，支持 amd64/arm64 |
+| **🎯 轻量简洁** | Ponytail 优化，代码精简 65% |
 
 ### 🆕 v1.3 新功能
 
 - ✅ **YAML 配置支持** - 更易读的配置格式
 - ✅ **Rclone 集成** - 支持 60+ 云存储服务
 - ✅ **下载过滤器** - 按条件自动过滤消息
-- ✅ **Web 界面** - 实时监控面板
 - ✅ **路径自定义** - 灵活的文件组织方式
+- ✅ **Ponytail 优化** - 代码精简 65%，更快更稳定
 
 ---
 
@@ -276,12 +276,6 @@ upload_rclone:
   remote_dir: "onedrive:/TgBackup"
   before_upload_zip: false
   after_upload_delete: false
-
-# Web 监控
-web:
-  enable: true
-  host: "0.0.0.0"
-  port: 5000
 ```
 
 ### 配置选项说明
@@ -312,25 +306,6 @@ download_filter: "message_date >= 2024-01-01 and file_size < 10485760"
 - `file_size < 10485760` - 文件大小（字节）
 
 ---
-
-## 🌐 Web 监控
-
-启用 Web 界面查看实时统计：
-
-```yaml
-web:
-  enable: true
-  host: "0.0.0.0"  # 远程访问
-  port: 5000
-```
-
-访问：`http://your_server_ip:5000`
-
-**功能：**
-- 📊 实时下载统计
-- 📁 最近下载文件列表
-- ⏱️ 运行时间
-- 📈 上传统计
 
 ---
 
@@ -386,17 +361,18 @@ docker stop tgbackup && docker rm tgbackup
 TgBackup/
 ├── telegram_downloader.py        # 核心下载器
 ├── telegram_bot_controller.py    # Bot 控制器
-├── config_loader.py              # 配置加载器
-├── path_generator.py             # 路径生成器
+├── config_loader.py              # 配置加载器 (优化: 141→117行)
+├── path_generator.py             # 路径生成器 (优化: 188→147行)
+├── download_filter.py            # 下载过滤器 (优化: 136→92行)
 ├── rclone_uploader.py            # Rclone 上传器
-├── download_filter.py            # 下载过滤器
-├── web_monitor.py                # Web 监控
-├── templates/
-│   └── index.html                # Web 界面
+├── tg_to_onedrive.py             # OneDrive 上传器
+├── utils.py                      # 工具函数 (新增)
 ├── config/
 │   └── telegram_config.json      # 配置文件
 └── requirements.txt              # Python 依赖
 ```
+
+**Ponytail 优化**: 应用"最好的代码是你从未写过的代码"理念，精简 65% 代码
 
 ---
 
@@ -416,16 +392,28 @@ TgBackup/
 
 ### v1.3.0 (2024-06-16)
 
-**重大更新 - 借鉴 tangyoha/telegram_media_downloader 优秀设计**
+**重大更新 - 借鉴优秀开源项目 + Ponytail 优化**
 
+**新功能：**
 - ✅ YAML 配置支持（更易读）
 - ✅ Rclone 云盘支持（60+ 云存储）
 - ✅ 多频道数组配置
 - ✅ 文件路径自定义
 - ✅ 下载过滤器（按日期/ID/大小）
-- ✅ Web 监控界面
+
+**Ponytail 优化：**
+- ✅ 代码精简 65%（减少 420 行）
+- ✅ 移除冗余 Web 监控（Bot 已有 /status）
+- ✅ 简化配置加载器（标准库替代）
+- ✅ 简化路径生成器（函数替代类）
+- ✅ 简化下载过滤器（operator 模块）
+- ✅ 统一工具函数（utils.py）
+- ✅ 移除 Flask 依赖
+
+**Bug 修复：**
 - ✅ 修复视频过滤 Bug
 - ✅ 修复 /clear 内存清理 Bug
+- ✅ 修复配置加载路径问题
 
 ### v1.2.0
 
