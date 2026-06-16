@@ -670,12 +670,15 @@ class BotController:
             await event.reply("🔄 正在清理缓存...")
 
             try:
-                # 清理下载记录
+                # 清理下载记录文件
                 record_file = 'downloaded_messages.json'
                 if os.path.exists(record_file):
                     os.remove(record_file)
 
-                await event.reply("✅ 缓存已清理\n\n清理内容:\n- 下载记录")
+                # 清空内存中的下载记录
+                self.downloader_bot.downloader.downloaded_ids.clear()
+
+                await event.reply("✅ 缓存已清理\n\n清理内容:\n- 下载记录文件\n- 内存缓存")
             except Exception as e:
                 await event.reply(f"❌ 清理失败: {e}")
 
