@@ -955,7 +955,7 @@ async def main_with_bot():
     """带 Bot 控制的主函数"""
     # 加载配置
     try:
-        tg_config = TelegramConfig('telegram_config.json')
+        tg_config = TelegramConfig('config/telegram_config.json')
     except (FileNotFoundError, ValueError) as e:
         logger.error(f"Telegram 配置错误: {e}")
         sys.exit(1)
@@ -966,7 +966,7 @@ async def main_with_bot():
 
     if not bot_token:
         logger.warning("未配置 bot_token，Bot 控制功能将不可用")
-        logger.info("如需启用，请在 telegram_config.json 中添加:")
+        logger.info("如需启用，请在 config/telegram_config.json 中添加:")
         logger.info('  "bot_token": "YOUR_BOT_TOKEN"')
         logger.info('  "admin_ids": [YOUR_USER_ID]')
         # 继续运行但不启用 Bot
@@ -980,9 +980,9 @@ async def main_with_bot():
 
     # 加载 OneDrive 配置（可选）
     onedrive_config = None
-    if os.path.exists('onedrive_config.json'):
+    if os.path.exists('config/onedrive_config.json'):
         try:
-            onedrive_config = Config('onedrive_config.json')
+            onedrive_config = Config('config/onedrive_config.json')
             logger.info("✓ OneDrive 配置已加载")
         except Exception as e:
             logger.warning(f"OneDrive 配置加载失败: {e}")
