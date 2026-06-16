@@ -82,7 +82,8 @@ class BotController:
                 "/list - 列出频道\n"
                 "/pause - 暂停下载\n"
                 "/resume - 恢复下载\n"
-                "/config - 查看配置"
+                "/config - 查看配置\n"
+                "/history <频道> [数量] - 下载历史消息"
             )
 
         @self.bot.on(events.NewMessage(pattern='/status'))
@@ -228,6 +229,32 @@ class BotController:
             )
 
             await event.reply(config_text)
+
+        @self.bot.on(events.NewMessage(pattern='/history'))
+        async def cmd_history(event):
+            if not self.is_admin(event.sender_id):
+                return
+
+            parts = event.message.text.split()
+            if len(parts) < 2:
+                await event.reply(
+                    "❌ 用法: /history <频道> [数量]\n\n"
+                    "示例:\n"
+                    "/history @channel 100\n"
+                    "/history @channel 0 (下载全部)"
+                )
+                return
+
+            channel_input = parts[1]
+            limit = int(parts[2]) if len(parts) > 2 else 100
+
+            await event.reply(f"🔄 开始下载历史消息: {channel_input}\n限制: {limit if limit > 0 else '全部'}\n\n请稍候...")
+
+            try:
+                count = await self.downloader_bot.download_history(channel_input, limit)
+                await event.reply(f"✅ 历史下载完成！\n成功下载 {count} 个文件")
+            except Exception as e:
+                await event.reply(f"❌ 下载失败: {e}")
 
         logger.info("✓ Bot 命令已注册")
 

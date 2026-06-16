@@ -452,6 +452,62 @@ class TelegramDownloaderBot:
         finally:
             await self.stop()
 
+    async def download_history(
+        self,
+        channel_input: str,
+        limit: int = 100,
+        offset_date: Optional[datetime] = None
+    ):
+        """
+        下载频道历史消息
+
+        Args:
+            channel_input: 频道用户名或 ID
+            limit: 下载数量限制（0 = 全部）
+            offset_date: 起始日期（None = 从最新开始）
+        """
+        try:
+            entity = await self.client.get_entity(channel_input)
+            chat_title = getattr(entity, 'title', channel_input)
+
+            logger.info("=" * 60)
+            logger.info(f"开始下载历史消息: {chat_title}")
+            logger.info(f"  限制数量: {limit if limit > 0 else '全部'}")
+            if offset_date:
+                logger.info(f"  起始日期: {offset_date.strftime('%Y-%m-%d %H:%M:%S')}")
+            logger.info("=" * 60)
+
+            downloaded_count = 0
+            processed_count = 0
+
+            async for message in self.client.iter_messages(
+                entity,
+                limit=limit if limit > 0 else None,
+                offset_date=offset_date
+            ):
+                processed_count += 1
+
+                # 每处理 100 条消息输出进度
+                if processed_count % 100 == 0:
+                    logger.info(f"已处理 {processed_count} 条消息，已下载 {downloaded_count} 个文件")
+
+                # 下载媒体
+                result = await self.downloader.download_media(message, chat_title)
+                if result:
+                    downloaded_count += 1
+
+            logger.info("=" * 60)
+            logger.info("历史消息下载完成")
+            logger.info(f"  处理消息: {processed_count}")
+            logger.info(f"  下载文件: {downloaded_count}")
+            logger.info("=" * 60)
+
+            return downloaded_count
+
+        except Exception as e:
+            logger.error(f"下载历史消息失败: {e}")
+            return 0
+
     async def stop(self):
         """停止机器人"""
         logger.info("正在关闭...")
@@ -472,6 +528,14 @@ class TelegramDownloaderBot:
 
 async def main():
     """主函数"""
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Telegram Media Downloader')
+    parser.add_argument('--download-history', metavar='CHANNEL', help='下载频道历史消息')
+    parser.add_argument('--limit', type=int, default=100, help='下载数量限制（0=全部，默认100）')
+    parser.add_argument('--from-date', help='起始日期 (YYYY-MM-DD)')
+    args = parser.parse_args()
+
     # 加载配置
     try:
         tg_config = TelegramConfig('telegram_config.json')
@@ -490,9 +554,29 @@ async def main():
     else:
         logger.info("未找到 OneDrive 配置，仅下载不上传")
 
-    # 创建并运行机器人
+    # 创建机器人
     bot = TelegramDownloaderBot(tg_config, onedrive_config)
-    await bot.run()
+
+    # 如果是下载历史模式
+    if args.download_history:
+        await bot.start()
+
+        # 解析日期
+        offset_date = None
+        if args.from_date:
+            try:
+                offset_date = datetime.strptime(args.from_date, '%Y-%m-%d')
+            except ValueError:
+                logger.error("日期格式错误，应为 YYYY-MM-DD")
+                sys.exit(1)
+
+        # 下载历史
+        await bot.download_history(args.download_history, args.limit, offset_date)
+
+        await bot.stop()
+    else:
+        # 正常运行模式
+        await bot.run()
 
 
 if __name__ == '__main__':
