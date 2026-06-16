@@ -5,6 +5,9 @@
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://www.docker.com/)
+[![Docker Hub](https://img.shields.io/docker/v/yannlie/tg-to-onedrive-uploader?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/yannlie/tg-to-onedrive-uploader)
+[![Docker Pulls](https://img.shields.io/docker/pulls/yannlie/tg-to-onedrive-uploader?logo=docker)](https://hub.docker.com/r/yannlie/tg-to-onedrive-uploader)
+[![GitHub Release](https://img.shields.io/github/v/release/yannlie/tg-to-onedrive-uploader)](https://github.com/yannlie/tg-to-onedrive-uploader/releases)
 
 ## 🎯 核心特性
 
@@ -50,6 +53,32 @@
 ---
 
 ## 🚀 快速开始
+
+### 使用 Docker（推荐）
+
+```bash
+# 拉取镜像
+docker pull yannlie/tg-to-onedrive-uploader:latest
+
+# 准备配置
+mkdir -p config downloads sessions
+cp telegram_config.example.json config/telegram_config.json
+# 编辑配置文件...
+
+# 运行
+docker run -d \
+  --name tg-downloader \
+  --restart unless-stopped \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/downloads:/app/downloads \
+  -v $(pwd)/sessions:/app/sessions \
+  yannlie/tg-to-onedrive-uploader:latest
+```
+
+**或使用 docker-compose**:
+```bash
+docker-compose up -d
+```
 
 ### 前置要求
 
