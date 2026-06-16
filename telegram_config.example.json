@@ -1,0 +1,31 @@
+{
+  "api_id": "YOUR_API_ID",
+  "api_hash": "YOUR_API_HASH",
+  "phone": "+8612345678900",
+  "channels": [
+    "@channel_username",
+    "https://t.me/channel_link",
+    -1001234567890
+  ],
+  "download_path": "./downloads",
+  "media_types": ["photo", "video", "document", "audio"],
+  "file_size_limit": 2147483648,
+  "extensions_whitelist": [],
+  "extensions_blacklist": [".exe", ".bat", ".cmd", ".scr"],
+  "auto_upload": true,
+  "delete_after_upload": false,
+  "comment": "配置说明",
+  "instructions": {
+    "api_id": "在 https://my.telegram.org/apps 获取",
+    "api_hash": "在 https://my.telegram.org/apps 获取",
+    "phone": "你的手机号，格式: +86手机号",
+    "channels": "频道/群组列表，支持 @username、链接或 chat_id",
+    "download_path": "下载目录",
+    "media_types": "要下载的媒体类型: photo/video/document/audio",
+    "file_size_limit": "文件大小限制（bytes），默认 2GB",
+    "extensions_whitelist": "扩展名白名单，留空则不限制",
+    "extensions_blacklist": "扩展名黑名单",
+    "auto_upload": "下载后自动上传到 OneDrive",
+    "delete_after_upload": "上传成功后删除本地文件"
+  }
+}

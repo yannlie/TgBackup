@@ -1,10 +1,32 @@
-# TG Media to OneDrive 自动上传工具
+# TG Media to OneDrive 完整解决方案
 
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub Actions](https://github.com/yannlie/tg-to-onedrive-uploader/workflows/Python%20Code%20Quality/badge.svg)](https://github.com/yannlie/tg-to-onedrive-uploader/actions)
 
-自动监听 `telegram_media_downloader` 下载目录，文件下载完成后自动上传到 OneDrive。
+**完整的 Telegram 媒体下载 + OneDrive 自动上传解决方案**
+
+## 🎯 两种使用模式
+
+### 模式 1：Telegram 实时下载器（推荐！⭐）
+**[telegram_downloader.py](telegram_downloader.py)** - 监听频道/群组，实时下载并自动上传到 OneDrive
+
+✨ **特性**：
+- 🔄 监听多个频道/群组的新消息
+- 📥 自动下载照片、视频、文档、音频
+- 🎯 按类型、大小、扩展名过滤
+- 📁 按频道自动分类
+- 🚀 下载完成自动上传 OneDrive
+- 📖 [详细文档 →](TELEGRAM_README.md)
+
+### 模式 2：目录监听上传器
+**[tg_to_onedrive.py](tg_to_onedrive.py)** - 监听本地目录，文件下载完成后自动上传
+
+✨ **特性**：
+- 👀 监听本地下载目录
+- ⏱️ 智能判断文件下载完成
+- 📤 自动上传到 OneDrive
+- 适合配合第三方下载工具使用
 
 ## ✨ 功能特性
 
