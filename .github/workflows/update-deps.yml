@@ -1,0 +1,65 @@
+name: Auto Update Dependencies
+
+on:
+  schedule:
+    # 每周一 UTC 00:00 运行
+    - cron: '0 0 * * 1'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install pip-tools
+      run: |
+        pip install pip-tools
+
+    - name: Update dependencies
+      run: |
+        pip-compile --upgrade requirements.txt || true
+
+    - name: Check for changes
+      id: changes
+      run: |
+        if git diff --quiet requirements.txt; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Pull Request
+      if: steps.changes.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update dependencies'
+        title: '🔄 Auto Update Dependencies'
+        body: |
+          ## 依赖更新
+
+          此 PR 由 GitHub Actions 自动创建，用于更新项目依赖。
+
+          ### 变更内容
+          - 更新 `requirements.txt` 中的包版本
+
+          ### 检查清单
+          - [ ] 查看依赖变更
+          - [ ] 测试兼容性
+          - [ ] 合并此 PR
+
+          ---
+          🤖 由 [Auto Update Dependencies workflow](https://github.com/${{ github.repository }}/actions/workflows/update-deps.yml) 自动创建
+        branch: auto-update-deps
+        delete-branch: true
+        labels: dependencies, automated

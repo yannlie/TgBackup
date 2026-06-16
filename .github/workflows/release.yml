@@ -1,0 +1,65 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install pyinstaller
+
+    - name: Build standalone executable (Linux)
+      run: |
+        pyinstaller --onefile --name tg-to-onedrive-linux tg_to_onedrive.py
+
+    - name: Create release archive
+      run: |
+        mkdir -p release
+        cp dist/tg-to-onedrive-linux release/
+        cp get_refresh_token.py release/
+        cp onedrive_config.example.json release/
+        cp requirements.txt release/
+        cp README.md release/
+        cp FAQ.md release/
+        cd release
+        tar -czf ../tg-to-onedrive-linux.tar.gz *
+
+    - name: Extract release notes
+      id: extract_notes
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "Release ${VERSION}" > release_notes.md
+        echo "" >> release_notes.md
+        echo "## Changes" >> release_notes.md
+        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s" >> release_notes.md || echo "- Initial release" >> release_notes.md
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release ${{ steps.extract_notes.outputs.version }}
+        body_path: release_notes.md
+        files: |
+          tg-to-onedrive-linux.tar.gz
+          requirements.txt
+          README.md
+          FAQ.md
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
