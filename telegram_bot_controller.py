@@ -206,7 +206,11 @@ class BotController:
                 "/pause - 暂停下载\n"
                 "/resume - 恢复下载\n"
                 "/history <频道> [数量] - 下载历史\n"
-                "/recent [数量] - 最近下载\n\n"
+                "/recent [数量] - 最近下载\n"
+                "/browse <频道> - 浏览历史消息\n"
+                "/download <消息ID> - 下载指定消息\n\n"
+                "💡 **快捷功能**\n"
+                "直接转发消息给我 - 自动下载媒体\n\n"
                 "🔍 **查询功能**\n"
                 "/search <关键词> - 搜索文件\n"
                 "/logs [行数] - 查看日志\n"
@@ -241,7 +245,12 @@ class BotController:
                 "`/resume` - 恢复所有下载任务\n"
                 "`/history @channel 100` - 下载指定数量历史消息\n"
                 "`/history @channel 0` - 下载全部历史消息\n"
+                "`/browse @channel` - 浏览频道历史（显示最近 20 条）\n"
+                "`/download 12345` - 下载指定消息 ID 的媒体\n"
                 "`/recent 10` - 查看最近 10 个下载\n\n"
+                "**快捷下载**\n"
+                "💡 直接转发消息给我，自动下载媒体文件\n"
+                "支持：照片、视频、文档、音频\n\n"
                 "**查询功能**\n"
                 "`/search 关键词` - 搜索已下载文件\n"
                 "`/logs 50` - 查看最新 50 行日志\n"
@@ -743,7 +752,199 @@ class BotController:
             except Exception as e:
                 await event.reply(f"❌ 备份失败: {e}")
 
-        logger.info("✓ Bot 命令已注册 (25+ 命令)")
+        @self.bot.on(events.NewMessage(pattern='/browse'))
+        async def cmd_browse(event):
+            """浏览频道历史消息"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            parts = event.message.text.split()
+            if len(parts) < 2:
+                await event.reply("❌ 用法: /browse @channel [数量]")
+                return
+
+            channel_input = parts[1]
+            limit = int(parts[2]) if len(parts) > 2 else 20
+
+            await event.reply(f"🔄 正在浏览 {channel_input} 最近 {limit} 条消息...")
+
+            try:
+                entity = await self.downloader_bot.client.get_entity(channel_input)
+                chat_title = getattr(entity, 'title', channel_input)
+
+                messages = []
+                async for message in self.downloader_bot.client.iter_messages(entity, limit=limit):
+                    if message.media:
+                        # 获取媒体类型
+                        media_type = "unknown"
+                        if message.photo:
+                            media_type = "📷 照片"
+                        elif message.video:
+                            media_type = "🎥 视频"
+                        elif message.document:
+                            media_type = "📄 文档"
+                        elif message.audio:
+                            media_type = "🎵 音频"
+
+                        # 获取文件大小
+                        file_size = ""
+                        if hasattr(message.media, 'document'):
+                            size = message.media.document.size
+                            file_size = f" ({self.format_size(size)})"
+
+                        # 获取文件名
+                        file_name = ""
+                        if message.file and message.file.name:
+                            file_name = f"\n   📝 {message.file.name}"
+
+                        messages.append({
+                            'id': message.id,
+                            'type': media_type,
+                            'size': file_size,
+                            'name': file_name,
+                            'date': message.date.strftime('%m-%d %H:%M'),
+                            'text': message.text[:30] + '...' if message.text and len(message.text) > 30 else message.text or ''
+                        })
+
+                if not messages:
+                    await event.reply(f"📭 频道 {chat_title} 最近 {limit} 条消息中没有媒体")
+                    return
+
+                # 分页显示
+                text = f"📺 **{chat_title}**\n"
+                text += f"最近 {len(messages)} 条媒体消息:\n\n"
+
+                for msg in messages:
+                    text += f"**消息 ID: {msg['id']}** | {msg['date']}\n"
+                    text += f"{msg['type']}{msg['size']}"
+                    if msg['name']:
+                        text += msg['name']
+                    if msg['text']:
+                        text += f"\n💬 {msg['text']}"
+                    text += "\n\n"
+
+                text += f"💡 使用 /download {messages[0]['id']} 下载指定消息"
+
+                # Telegram 消息长度限制，分批发送
+                if len(text) > 4000:
+                    chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
+                    for chunk in chunks:
+                        await event.reply(chunk)
+                else:
+                    await event.reply(text)
+
+            except Exception as e:
+                await event.reply(f"❌ 浏览失败: {e}")
+
+        @self.bot.on(events.NewMessage(pattern='/download'))
+        async def cmd_download_by_id(event):
+            """下载指定消息 ID 的媒体"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            parts = event.message.text.split()
+            if len(parts) < 2:
+                await event.reply(
+                    "❌ 用法: /download <消息ID> [频道]\n\n"
+                    "示例:\n"
+                    "/download 12345\n"
+                    "/download 12345 @channel"
+                )
+                return
+
+            message_id = int(parts[1])
+            channel_input = parts[2] if len(parts) > 2 else None
+
+            await event.reply(f"🔄 正在下载消息 {message_id}...")
+
+            try:
+                # 如果指定了频道
+                if channel_input:
+                    entity = await self.downloader_bot.client.get_entity(channel_input)
+                    message = await self.downloader_bot.client.get_messages(entity, ids=message_id)
+                else:
+                    # 尝试从已监听的频道中查找
+                    message = None
+                    for channel in self.downloader_bot.channels:
+                        try:
+                            msg = await self.downloader_bot.client.get_messages(channel, ids=message_id)
+                            if msg and msg.media:
+                                message = msg
+                                break
+                        except:
+                            continue
+
+                if not message or not message.media:
+                    await event.reply(f"❌ 未找到消息 {message_id} 或消息不包含媒体")
+                    return
+
+                # 下载
+                chat_title = "Manual_Download"
+                result = await self.downloader_bot.downloader.download_media(message, chat_title)
+
+                if result:
+                    await event.reply(f"✅ 下载完成！\n\n文件: {result.get('file_name', 'N/A')}")
+                else:
+                    await event.reply(f"❌ 下载失败或文件已存在")
+
+            except Exception as e:
+                await event.reply(f"❌ 下载失败: {e}")
+
+        @self.bot.on(events.NewMessage())
+        async def handle_forwarded_message(event):
+            """处理转发的消息，自动下载媒体"""
+            if not self.is_admin(event.sender_id):
+                return
+
+            # 忽略命令消息
+            if event.message.text and event.message.text.startswith('/'):
+                return
+
+            # 检查是否是转发的消息
+            if not event.message.fwd_from and not event.message.media:
+                return
+
+            # 检查是否有媒体
+            if not event.message.media:
+                return
+
+            await event.reply("🔄 检测到媒体文件，开始下载...")
+
+            try:
+                # 获取来源信息
+                source_name = "Forwarded"
+                if event.message.fwd_from:
+                    if event.message.fwd_from.from_name:
+                        source_name = event.message.fwd_from.from_name
+                    elif event.message.fwd_from.from_id:
+                        try:
+                            entity = await event.client.get_entity(event.message.fwd_from.from_id)
+                            source_name = getattr(entity, 'title', getattr(entity, 'username', 'Unknown'))
+                        except:
+                            pass
+
+                # 下载
+                result = await self.downloader_bot.downloader.download_media(
+                    event.message,
+                    f"Manual/{source_name}"
+                )
+
+                if result:
+                    file_name = result.get('file_name', 'N/A')
+                    file_size = result.get('file_size', 0)
+                    await event.reply(
+                        f"✅ **下载完成**\n\n"
+                        f"文件: `{file_name}`\n"
+                        f"大小: {self.format_size(file_size)}\n"
+                        f"来源: {source_name}"
+                    )
+                else:
+                    await event.reply("⏭️ 文件已存在或不符合过滤条件")
+
+            except Exception as e:
+                await event.reply(f"❌ 下载失败: {e}")
+
+        logger.info("✓ Bot 命令已注册 (28+ 命令，包含转发下载)")
 
     def should_process_message(self) -> bool:
         """是否应该处理消息（暂停检查）"""

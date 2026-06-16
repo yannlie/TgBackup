@@ -1,0 +1,29 @@
+{
+  "telegram": {
+    "api_id": 12345678,
+    "api_hash": "your_api_hash_here",
+    "phone": "+8613800138000",
+    "channels": [],
+    "download_path": "./downloads",
+    "media_types": ["photo", "video", "document", "audio"],
+    "file_size_limit": 2147483648,
+    "extensions_whitelist": [],
+    "extensions_blacklist": [".exe", ".bat", ".cmd", ".sh"],
+    "auto_upload": true,
+    "delete_after_upload": false
+  },
+  "onedrive": {
+    "client_id": "your_client_id_here",
+    "client_secret": "your_client_secret_here",
+    "refresh_token": "your_refresh_token_here",
+    "base_path": "/TG_Media",
+    "chunk_size": 10,
+    "min_stable_time": 5
+  },
+  "bot": {
+    "bot_token": "123456:ABC-DEF...",
+    "admin_ids": [123456789],
+    "allow_forward_download": true,
+    "allow_channel_preview": true
+  }
+}
