@@ -195,13 +195,23 @@ class MediaDownloader:
             if whitelist and ext not in whitelist:
                 return False, f"扩展名不在白名单: {ext}"
 
-            # 检查文档类型
+            # 检查文档类型（通过 MIME 类型判断）
             mime_type = doc.mime_type
-            if 'video' in mime_type and 'video' not in media_types:
+
+            # 判断具体媒体类型
+            is_video = 'video' in mime_type
+            is_audio = 'audio' in mime_type
+
+            # 视频类型检查
+            if is_video and 'video' not in media_types:
                 return False, "视频类型被排除"
-            if 'audio' in mime_type and 'audio' not in media_types:
+
+            # 音频类型检查
+            if is_audio and 'audio' not in media_types:
                 return False, "音频类型被排除"
-            if 'document' not in media_types:
+
+            # 其他文档类型检查（不是视频也不是音频）
+            if not is_video and not is_audio and 'document' not in media_types:
                 return False, "文档类型被排除"
 
         elif isinstance(message.media, MessageMediaWebPage):
