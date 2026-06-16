@@ -43,14 +43,15 @@ class CallbackHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/html; charset=utf-8')
             self.end_headers()
-            self.wfile.write(b'''
+            self.wfile.write('''
                 <html>
+                <head><meta charset="utf-8"></head>
                 <body>
                     <h2>授权成功！</h2>
                     <p>可以关闭此页面，返回终端查看 refresh_token</p>
                 </body>
                 </html>
-            ''')
+            '''.encode('utf-8'))
         else:
             self.send_response(400)
             self.end_headers()
