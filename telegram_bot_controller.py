@@ -80,12 +80,12 @@ class BotController:
         self.paused = False
         self.start_time = datetime.now()
 
-        # 创建 Bot 客户端
+        # 创建 Bot 客户端（不要立即 start）
         self.bot = TelegramClient(
             'bot_session',
             downloader_bot.tg_config.get('api_id'),
             downloader_bot.tg_config.get('api_hash')
-        ).start(bot_token=bot_token)
+        )
 
     def is_admin(self, user_id: int) -> bool:
         """检查是否是管理员"""
@@ -182,6 +182,8 @@ class BotController:
 
     async def start(self):
         """启动 Bot"""
+        # 先启动 Bot 客户端
+        await self.bot.start(bot_token=self.bot_token)
         logger.info("Bot 控制器已启动")
 
         @self.bot.on(events.NewMessage(pattern='/start'))
