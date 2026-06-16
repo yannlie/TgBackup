@@ -115,22 +115,28 @@ deploy.bat
 
 Docker 部署适合服务器长期运行，支持自动重启和资源管理。
 
-#### 1.1 准备配置文件
+#### 1.1 拉取镜像
 
 ```bash
-# 复制配置模板
-cp telegram_config.example.json telegram_config.json
-cp onedrive_config.example.json onedrive_config.json
+docker pull yannlie/tgbackup:latest
+```
+
+#### 1.2 准备配置文件
+
+```bash
+# 创建必要的目录
+mkdir -p config downloads sessions logs
+
+# 下载配置模板
+wget https://raw.githubusercontent.com/yannlie/TgBackup/main/telegram_config.example.json -O config/telegram_config.json
+wget https://raw.githubusercontent.com/yannlie/TgBackup/main/onedrive_config.example.json -O config/onedrive_config.json
 
 # 编辑配置（参考配置说明章节）
-nano telegram_config.json
+nano config/telegram_config.json
+nano config/onedrive_config.json
 ```
 
-#### 1.2 构建镜像
-
-```bash
-docker build -t tg-downloader .
-```
+或者手动创建配置文件（参考[配置说明](#-配置说明)章节）。
 
 #### 1.3 首次登录
 
@@ -138,17 +144,54 @@ docker build -t tg-downloader .
 
 ```bash
 docker run -it --rm \
-  -v $(pwd)/telegram_config.json:/app/config/telegram_config.json \
+  -v $(pwd)/config/telegram_config.json:/app/config/telegram_config.json \
   -v $(pwd)/sessions:/app/sessions \
-  tg-downloader python telegram_downloader.py
+  yannlie/tgbackup:latest python telegram_downloader.py
 ```
 
 按提示输入手机验证码，登录成功后按 `Ctrl+C` 退出。
 
 #### 1.4 启动服务
 
+**使用 docker run**:
+
 ```bash
-# 使用 docker-compose（推荐）
+docker run -d \
+  --name tgbackup \
+  --restart unless-stopped \
+  -v $(pwd)/config/telegram_config.json:/app/config/telegram_config.json \
+  -v $(pwd)/config/onedrive_config.json:/app/config/onedrive_config.json \
+  -v $(pwd)/downloads:/app/downloads \
+  -v $(pwd)/sessions:/app/sessions \
+  -v $(pwd)/logs:/app/logs \
+  yannlie/tgbackup:latest
+```
+
+**或使用 docker-compose（推荐）**:
+
+创建 `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  tgbackup:
+    image: yannlie/tgbackup:latest
+    container_name: tgbackup
+    restart: unless-stopped
+    volumes:
+      - ./config/telegram_config.json:/app/config/telegram_config.json:ro
+      - ./config/onedrive_config.json:/app/config/onedrive_config.json:ro
+      - ./downloads:/app/downloads
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+    environment:
+      - TZ=Asia/Shanghai
+```
+
+启动：
+
+```bash
 docker-compose up -d
 
 # 查看日志
@@ -162,16 +205,27 @@ docker-compose down
 
 ```bash
 # 查看容器状态
+docker ps
+# 或
 docker-compose ps
 
+# 查看日志
+docker logs -f tgbackup
+# 或
+docker-compose logs -f
+
 # 重启服务
+docker restart tgbackup
+# 或
 docker-compose restart
 
 # 进入容器调试
-docker-compose exec telegram-downloader bash
+docker exec -it tgbackup bash
 
-# 查看实时日志
-docker-compose logs -f --tail=100
+# 更新到最新版本
+docker pull yannlie/tgbackup:latest
+docker-compose down
+docker-compose up -d
 ```
 
 **详细 Docker 文档**: 参考 [DOCKER.md](DOCKER.md)
