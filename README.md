@@ -80,11 +80,13 @@ docker pull yannlie/tgbackup:latest
 mkdir -p config downloads sessions
 wget https://raw.githubusercontent.com/yannlie/TgBackup/main/telegram_config.example.json -O config/telegram_config.json
 
-# 编辑配置文件，填入:
-# - api_id 和 api_hash (从 https://my.telegram.org/apps 获取)
+# 编辑配置文件，填入 6 项必需配置:
+# - api_id, api_hash (从 https://my.telegram.org/apps 获取)
 # - phone (你的手机号)
 # - bot_token (从 @BotFather 获取)
-# - admin_ids (与 @userinfobot 对话获取你的 ID)
+# - admin_ids (与 @userinfobot 对话获取)
+# - channels (留空即可)
+nano config/telegram_config.json
 
 # 3. 首次登录
 docker run -it --rm \
@@ -271,9 +273,9 @@ Bot: "✅ 下载完成！"
   "api_id": 12345678,
   "api_hash": "your_api_hash",
   "phone": "+8613800138000",
-  "channels": [],
   "bot_token": "123456:ABC-DEF...",
-  "admin_ids": [123456789]
+  "admin_ids": [123456789],
+  "channels": []
 }
 ```
 
@@ -284,13 +286,11 @@ Bot: "✅ 下载完成！"
 | `api_id` | ✅ | 从 https://my.telegram.org/apps 获取 |
 | `api_hash` | ✅ | 从 https://my.telegram.org/apps 获取 |
 | `phone` | ✅ | 你的手机号（国际格式：+86...） |
-| `channels` | ❌ | 监听的频道列表（可为空） |
-| `bot_token` | ⭐ | Bot Token，强烈推荐配置 |
-| `admin_ids` | ⭐ | 管理员 User ID 列表 |
+| `bot_token` | ✅ | Bot Token，从 @BotFather 获取 |
+| `admin_ids` | ✅ | 管理员 User ID 列表 |
+| `channels` | ✅ | 监听的频道列表（可为空） |
 
-⭐ = 推荐配置，启用 Bot 远程控制功能
-
-**详细配置**: 参考 [配置指南](../../wiki/配置指南)
+**详细配置**: 参考 [配置指南](docs/Configuration-Guide.md) 或 `telegram_config.full.json`
 
 ---
 
