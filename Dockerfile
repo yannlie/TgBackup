@@ -24,7 +24,6 @@ COPY telegram_downloader.py \
      telegram_bot_controller.py \
      tg_to_onedrive.py \
      get_refresh_token.py \
-     start.py \
      ./
 
 # 创建必要的目录
