@@ -71,8 +71,8 @@ class TelegramConfig:
                 "file_size_limit": 2147483648,
                 "extensions_whitelist": [],
                 "extensions_blacklist": [".exe", ".bat", ".cmd"],
-                "auto_upload": true,
-                "delete_after_upload": false
+                "auto_upload": False,
+                "delete_after_upload": False
             }
 
             with open(self.config_path, 'w', encoding='utf-8') as f:
